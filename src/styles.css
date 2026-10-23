@@ -134,6 +134,10 @@ button.on:hover { background: var(--accent-ink); }
   position: relative; z-index: 2;
 }
 .panel-foot h2 { margin-bottom: 9px; }
+
+/* 导出区标题行：step 徽标 + 标题，右侧并入党幅选择（单行不换行，压低 footer 高度） */
+.foothead { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+.foothead h2 { margin-bottom: 0; flex: 0 0 auto; white-space: nowrap; }
 .primary {
   width: 100%; border: none; border-radius: var(--radius-lg);
   background: var(--cta); color: #fff; font-size: 15px; font-weight: 650;
@@ -152,11 +156,12 @@ button.on:hover { background: var(--accent-ink); }
 }
 .toggle input { accent-color: var(--accent); }
 
-/* 导出画幅选择（紧凑一行，尽量不增高 footer） */
-.fmtrow { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
-.fmtrow label { font-size: 12.5px; color: var(--ink-2); flex: 0 0 auto; }
+/* 导出画幅选择（并入标题行右侧，单行不换行，尽量不增高 footer） */
+.fmtrow { display: flex; align-items: center; gap: 8px; }
+.foothead .fmtrow { flex: 1 1 auto; min-width: 0; margin-bottom: 0; }
+.fmtrow label { font-size: 12.5px; color: var(--ink-2); flex: 0 0 auto; white-space: nowrap; }
 .fmtrow select {
-  flex: 1; min-width: 0; font-size: 12.5px; padding: 5px 8px;
+  flex: 1; min-width: 0; font-size: 12.5px; padding: 4px 8px;
   border: 1px solid #c9ced7; border-radius: var(--radius);
   background: #fbfbfc; color: var(--ink); cursor: pointer;
 }

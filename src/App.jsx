@@ -646,21 +646,23 @@ export default function App() {
         </div>
 
         <footer className="panel-foot">
-          <h2><span className="step">3</span>导出成品</h2>
-          <div className="fmtrow">
-            <label htmlFor="fmt-select">导出画幅</label>
-            <select
-              id="fmt-select"
-              aria-label="导出画幅"
-              value={formatKey}
-              onChange={(e) => setFormatKey(e.target.value)}
-            >
-              {FORMATS.map((f) => (
-                <option key={f.key} value={f.key}>
-                  {f.label} · {f.w}×{f.h}
-                </option>
-              ))}
-            </select>
+          <div className="foothead">
+            <h2><span className="step">3</span>导出成品</h2>
+            <div className="fmtrow">
+              <label htmlFor="fmt-select">画幅</label>
+              <select
+                id="fmt-select"
+                aria-label="导出画幅"
+                value={formatKey}
+                onChange={(e) => setFormatKey(e.target.value)}
+              >
+                {FORMATS.map((f) => (
+                  <option key={f.key} value={f.key}>
+                    {f.label} · {f.w}×{f.h}
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
           <button
             className="primary"
