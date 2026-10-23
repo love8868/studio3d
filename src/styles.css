@@ -1,0 +1,194 @@
+/* ---------- 设计令牌（design tokens） ----------
+   强调蓝：选中态/步骤号；曼哈顿橙只做主 CTA 一处点缀（品牌规矩：橙 ≤10%）
+   间距刻度：4 / 8 / 12 / 16 / 24；圆角：控件 8、卡片 10、主按钮 10 */
+:root {
+  --accent: #2050c8;
+  --accent-ink: #173f9e;
+  --cta: #e8730c;
+  --cta-hover: #d26605;
+  --ink: #1d2126;
+  --ink-2: #4a5058;
+  --ink-3: #767d87;
+  --line: #dde1e7;
+  --track: #eceff3;
+  --card: #f6f7f9;
+  --radius: 8px;
+  --radius-lg: 10px;
+}
+
+* { box-sizing: border-box; }
+html, body, #root { height: 100%; margin: 0; }
+body {
+  font-family: "PingFang SC", "Microsoft YaHei", "Noto Sans CJK SC", sans-serif;
+  background: #eceef1;
+  color: var(--ink);
+}
+
+.layout { display: flex; height: 100%; height: 100dvh; }
+
+/* ---------- 左侧面板（桌面） ---------- */
+.panel {
+  width: 340px; flex: 0 0 340px;
+  display: flex; flex-direction: column;
+  background: #fff; border-right: 1px solid var(--line);
+}
+.panel-body { flex: 1; overflow-y: auto; padding: 18px 18px 8px; scrollbar-width: thin; }
+.panel-body::-webkit-scrollbar { width: 8px; }
+.panel-body::-webkit-scrollbar-thumb { background: #cfd4db; border-radius: 4px; }
+
+.panel-head h1 { font-size: 19px; margin: 0; letter-spacing: .01em; }
+.panel-head h1 .sub { font-size: 12px; color: var(--ink-3); font-weight: normal; margin-left: 4px; }
+.prodline { margin: 5px 0 2px; font-size: 11px; letter-spacing: .14em; color: var(--ink-3); }
+
+.panel section { margin-top: 20px; }
+.panel h2 {
+  font-size: 13px; color: var(--ink); margin: 0 0 10px;
+  display: flex; align-items: center; gap: 8px; letter-spacing: .05em;
+}
+.panel h2 .step {
+  width: 18px; height: 18px; border-radius: 50%; flex: 0 0 18px;
+  background: var(--accent); color: #fff; font-size: 11px; line-height: 18px; text-align: center;
+}
+.panel h3 {
+  font-size: 11px; font-weight: 600; color: var(--ink-3);
+  letter-spacing: .12em; margin: 14px 0 6px;
+}
+.panel section h3:first-of-type { margin-top: 2px; }
+
+button {
+  border: 1px solid #c9ced7; background: #fbfbfc; color: var(--ink);
+  border-radius: var(--radius); padding: 8px 6px; font-size: 13px; cursor: pointer;
+  transition: background .12s, border-color .12s, color .12s;
+}
+button:hover { background: #eef1f6; }
+button.on { background: var(--accent); border-color: var(--accent); color: #fff; }
+button.on:hover { background: var(--accent-ink); }
+
+/* 等宽成阵的 chip 组（对象/机位/线缆形态共用） */
+.chips3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+.chips2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px; }
+.chips4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+.chips4 button { padding: 8px 2px; font-size: 12.5px; }
+.chips5 { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; }
+.chips5 button { padding: 6px 2px; font-size: 12.5px; font-variant-numeric: tabular-nums; }
+.chip { display: flex; flex-direction: column; align-items: center; gap: 1px; padding: 7px 4px; }
+.chip b { font-size: 13px; font-weight: 600; }
+.chip small { font-size: 10.5px; color: var(--ink-3); }
+.chip.on small { color: #cdd9f8; }
+
+/* 焦段分段控件 */
+.seg {
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 3px;
+  background: var(--track); border-radius: var(--radius-lg); padding: 3px;
+}
+.seg button { border: none; background: transparent; border-radius: 7px; }
+.seg button:hover { background: #e0e5ec; }
+.seg button.on { background: var(--accent); color: #fff; }
+.seg button.on:hover { background: var(--accent-ink); }
+
+.hint { font-size: 12px; color: var(--ink-2); line-height: 1.55; margin: 10px 0 0; }
+
+.sliders label { display: block; font-size: 13px; margin: 10px 0; }
+.sliders label.off { opacity: .45; }
+.sliders label.off input { cursor: not-allowed; }
+.sliders label span { color: var(--ink-2); }
+.sliders label em { float: right; font-style: normal; font-weight: 600; font-variant-numeric: tabular-nums; }
+.sliders input[type="range"] { width: 100%; margin-top: 5px; accent-color: var(--accent); }
+
+/* 指标卡：人话参数（替代常驻 JSON 黑块） */
+.metrics { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.metric {
+  background: var(--card); border: 1px solid var(--line); border-radius: var(--radius-lg);
+  padding: 8px 12px 9px;
+}
+.metric span { display: block; font-size: 11px; color: var(--ink-3); letter-spacing: .08em; }
+.metric b { font-size: 21px; font-weight: 650; font-variant-numeric: tabular-nums; line-height: 1.25; }
+.metric b small { font-size: 12px; color: var(--ink-3); font-weight: 500; }
+
+/* 原始 JSON 折叠区 */
+.rawjson { margin-top: 8px; }
+.rawjson summary { font-size: 12px; color: var(--ink-3); cursor: pointer; padding: 4px 0; }
+.rawjson .json {
+  background: #14171b; color: #b7f0c0; border-radius: var(--radius);
+  padding: 10px; font-size: 11px; line-height: 1.5; max-height: 220px; overflow: auto;
+  white-space: pre-wrap; word-break: break-all; margin: 6px 0;
+}
+.mini { font-size: 12px; padding: 5px 10px; }
+
+/* ---------- 面板底部常驻导出区 ---------- */
+.panel-foot {
+  flex: 0 0 auto; border-top: 1px solid var(--line);
+  background: #fff; padding: 12px 18px 16px;
+}
+.panel-foot h2 { margin-bottom: 9px; }
+.primary {
+  width: 100%; border: none; border-radius: var(--radius-lg);
+  background: var(--cta); color: #fff; font-size: 15px; font-weight: 650;
+  padding: 12px; box-shadow: 0 4px 14px rgba(232, 115, 12, .35);
+  display: flex; align-items: baseline; justify-content: center; gap: 8px;
+}
+.primary:hover { background: var(--cta-hover); }
+.primary .psub { font-size: 11.5px; font-weight: 400; opacity: .85; }
+.subrow { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-top: 6px; }
+.airow { margin-top: 6px; }
+.airow button { width: 100%; }
+
+/* ---------- 画布 / 影棚 ---------- */
+.stage {
+  flex: 1; min-width: 0; position: relative;
+  /* 深色无缝影棚：径向渐变模拟背景纸 + 光池 */
+  background: radial-gradient(130% 95% at 50% 28%, #3b424d 0%, #272d36 55%, #161a20 100%);
+}
+.stage canvas { display: block; }
+
+.hud {
+  position: absolute; top: 12px; left: 12px; z-index: 4; pointer-events: none;
+  background: rgba(13, 16, 20, .55); color: #e8ebef; backdrop-filter: blur(4px);
+  border: 1px solid rgba(255, 255, 255, .09);
+  border-radius: var(--radius-lg); padding: 8px 12px; line-height: 1.45;
+}
+.hud b { display: block; font-size: 13px; }
+.hud span { font-size: 12px; color: #aeb6c0; font-variant-numeric: tabular-nums; }
+
+.hintpill {
+  position: absolute; bottom: 16px; left: 50%; transform: translateX(-50%); z-index: 4;
+  display: flex; align-items: center; gap: 12px; white-space: nowrap;
+  background: rgba(13, 16, 20, .62); color: #dfe4ea; backdrop-filter: blur(4px);
+  border: 1px solid rgba(255, 255, 255, .09);
+  border-radius: 999px; padding: 7px 8px 7px 16px; font-size: 12.5px;
+}
+.hintpill button {
+  border: none; border-radius: 999px; background: rgba(255, 255, 255, .14);
+  color: #fff; font-size: 12px; padding: 4px 11px;
+}
+.hintpill button:hover { background: rgba(255, 255, 255, .24); }
+
+.loadcard {
+  display: flex; align-items: center; gap: 9px; white-space: nowrap;
+  background: rgba(13, 16, 20, .72); color: #e8ebef;
+  border: 1px solid rgba(255, 255, 255, .1);
+  border-radius: var(--radius-lg); padding: 10px 16px; font-size: 13px;
+}
+.loadcard .spin {
+  width: 14px; height: 14px; border-radius: 50%; flex: 0 0 14px;
+  border: 2px solid rgba(255, 255, 255, .25); border-top-color: #fff;
+  animation: spin 0.8s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.errbar {
+  position: absolute; top: 10px; left: 10px; right: 10px; z-index: 6;
+  background: #fdecec; color: #8f1d1d; border: 1px solid #e5a3a3;
+  border-radius: var(--radius); padding: 8px 12px; font-size: 13px;
+}
+
+/* ---------- 手机端（≤760px）：上下堆叠，画布在上、面板在下滚动 ---------- */
+@media (max-width: 760px) {
+  .layout { flex-direction: column; }
+  .stage { order: -1; flex: 0 0 52dvh; min-height: 0; }
+  .panel { order: 0; width: auto; flex: 1 1 auto; min-height: 0; border-right: none; }
+  .panel-body { padding: 14px 14px 4px; }
+  .panel-foot { padding: 10px 14px 13px; }
+  .hud { top: 8px; left: 8px; padding: 6px 10px; }
+  .hintpill { bottom: 10px; font-size: 12px; max-width: calc(100% - 16px); white-space: normal; text-align: center; }
+}
