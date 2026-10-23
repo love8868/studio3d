@@ -23,6 +23,7 @@ import {
   exportCameraJSON,
   exportAIBundle,
   buildCameraParams,
+  buildPromptText,
 } from './lib/exporter'
 
 // ---------- 自动取景（fit-to-object） ----------
@@ -94,6 +95,7 @@ export default function App() {
   const [canvasError, setCanvasError] = useState(null)
   const [showHint, setShowHint] = useState(true)
   const [copied, setCopied] = useState(false)
+  const [promptCopied, setPromptCopied] = useState(false)
   const [transparent, setTransparent] = useState(false) // 干净 PNG 透明底（默认关）
   const [formatKey, setFormatKey] = useState(DEFAULT_FORMAT_KEY) // 导出画幅（默认 4:3）
   const format = useMemo(() => getFormat(formatKey), [formatKey])
@@ -290,6 +292,38 @@ export default function App() {
       setTimeout(() => setCopied(false), 1500)
     } catch {
       /* 剪贴板不可用时静默，仍可下载 */
+    }
+  }, [camParams])
+
+  // 一键复制英文提示词：优先 Clipboard API，失败时回退 textarea + execCommand
+  const copyPrompt = useCallback(() => {
+    if (!camParams) return
+    const text = buildPromptText(camParams)
+    const done = () => {
+      setPromptCopied(true)
+      setTimeout(() => setPromptCopied(false), 1500)
+    }
+    const fallback = () => {
+      try {
+        const ta = document.createElement('textarea')
+        ta.value = text
+        ta.setAttribute('readonly', '')
+        ta.style.position = 'fixed'
+        ta.style.top = '-1000px'
+        ta.style.opacity = '0'
+        document.body.appendChild(ta)
+        ta.select()
+        const ok = document.execCommand('copy')
+        document.body.removeChild(ta)
+        if (ok) done()
+      } catch {
+        /* 剪贴板不可用时静默 */
+      }
+    }
+    if (navigator.clipboard?.writeText) {
+      navigator.clipboard.writeText(text).then(done).catch(fallback)
+    } else {
+      fallback()
     }
   }, [camParams])
 
@@ -610,8 +644,8 @@ export default function App() {
             </div>
             <p className="hint">也可以直接拖动画面旋转、滚轮缩放；角度已限制在方位 ±65°、仰角 5°–60°。</p>
 
-            <h3>当前机位</h3>
-            <div className="metrics">
+            <h3 className="metrics-head">当前机位 <span className="scrollhint">向下滚动查看完整参数 ↓</span></h3>
+            <div className="metrics metrics-compact">
               <div className="metric"><span>方位角</span><b>{fmt(camParams?.azimuth_deg)}°</b></div>
               <div className="metric"><span>俯仰角</span><b>{fmt(camParams?.elevation_deg)}°</b></div>
               <div className="metric"><span>等效焦段</span><b>{fmt(camParams?.focal_equiv_mm)}<small> mm</small></b></div>
@@ -643,6 +677,7 @@ export default function App() {
               )}
             </details>
           </section>
+
         </div>
 
         <footer className="panel-foot">
@@ -727,12 +762,22 @@ export default function App() {
                 透明底
               </label>
             </div>
-            <p
-              className="hint"
-              title="1 个 ZIP 包含：干净渲染图（无地面/阴影；勾选「透明底」则产品外 alpha=0）、深度图、机位 JSON。深度图为控制网络专用（ControlNet / Qwen-Image-Edit 等），普通文生图/图生图只用干净图 + 文字提示词。"
-            >
-              1 个 ZIP（干净图 + 深度图 + JSON）· 透明底可选 · 深度图仅支持 ControlNet/Qwen
-            </p>
+            <div className="aihintrow">
+              <p
+                className="hint"
+                title="1 个 ZIP 包含：干净渲染图（无地面/阴影；勾选「透明底」则产品外 alpha=0）、深度图、机位 JSON、prompt.txt（可复制的英文提示词）。深度图为控制网络专用（ControlNet / Qwen-Image-Edit 等），普通文生图/图生图只用干净图 + 文字提示词。"
+              >
+                ZIP：干净图 · 深度图 · JSON · prompt.txt
+              </p>
+              <button
+                className="promptcopy"
+                onClick={copyPrompt}
+                disabled={!camParams}
+                title="复制英文提示词（可直接粘贴给 Gemini / 图生图模型）"
+              >
+                {promptCopied ? '已复制 ✓' : '复制提示词'}
+              </button>
+            </div>
           </div>
         </footer>
       </aside>

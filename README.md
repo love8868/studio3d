@@ -48,7 +48,7 @@ npx vite build --base=./
 - **渲染图** PNG：白底所选画幅；导出时隐藏深色光池圆盘，只保留 ShadowMaterial 接触阴影（不再出现白底黑盘）。
 - **深度图** PNG：单一代码路径（独立按钮与 AI 交接包共用）。临时收紧 near/far（按当前距离换算，不写死）、强制所选画幅、隐藏地面与 ghost 辅助体；`MeshDepthMaterial + RGBADepthPacking` → RenderTarget 读回 → 线性视深 → **8-bit 逆线性视差**（近白、远黑、背景纯黑），不是截图反相。
 - **机位参数** JSON：`schema: studio3d/camera@1`，含画幅（`image_width/image_height/aspect_ratio`、`export.format_key/format_label`）、垂直 fov、传感器高、near/far、相机 up、方位/仰角约定、相机坐标与 target、导出模式/预设/透明底、深度 near/far 等；支持**导入 JSON 恢复机位**（文件或粘贴）——会一并恢复导出画幅（旧版无 schema 的 JSON 回退 4:3）。
-- **AI 交接包·干净版**：打包成 **1 个 ZIP**（干净图 + 深度图 + 机位 JSON + README.txt），避免浏览器拦截多文件下载；勾选「透明底」时干净图带 alpha。干净图与深度图会隐藏 ground 与 ghost 墙/屏，只留产品本体；白底成品图仍保留 ghost 作展示参考。
+- **AI 交接包·干净版**：打包成 **1 个 ZIP**（干净图 + 深度图 + 机位 JSON + `prompt.txt` + README.txt），避免浏览器拦截多文件下载；`prompt.txt` 是可直接复制粘贴给 Gemini / 图生图模型的英文提示词；勾选「透明底」时干净图带 alpha。干净图与深度图会隐藏 ground 与 ghost 墙/屏，只留产品本体；白底成品图仍保留 ghost 作展示参考。
 - 深度图用途：Gemini / OpenAI 图像接口不接受 depth/pose 通道；深度图只适用于 Qwen-Image-Edit + ControlNet Union、fal `flux-general`、Runware 等支持 depth 条件的模型。
 
 ## 设计说明

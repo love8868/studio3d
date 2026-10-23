@@ -4,11 +4,11 @@
 :root {
   --accent: #2050c8;
   --accent-ink: #173f9e;
-  --cta: #e8730c;
-  --cta-hover: #d26605;
+  --cta: #c2410c;
+  --cta-hover: #a34700;
   --ink: #1d2126;
   --ink-2: #4a5058;
-  --ink-3: #767d87;
+  --ink-3: #5f6670;
   --line: #dde1e7;
   --track: #eceff3;
   --card: #f6f7f9;
@@ -68,6 +68,7 @@ button {
 button:hover { background: #eef1f6; }
 button.on { background: var(--accent); border-color: var(--accent); color: #fff; }
 button.on:hover { background: var(--accent-ink); }
+button:disabled { opacity: .55; cursor: not-allowed; }
 
 /* 等宽成阵的 chip 组（对象/机位/线缆形态共用） */
 .chips3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
@@ -110,6 +111,30 @@ button.on:hover { background: var(--accent-ink); }
 .metric b { font-size: 21px; font-weight: 650; font-variant-numeric: tabular-nums; line-height: 1.25; }
 .metric b small { font-size: 12px; color: var(--ink-3); font-weight: 500; }
 
+/* 紧凑当前机位：单行 4 等分，单卡内分隔线（340px 面板不换行不溢出） */
+.metrics-compact {
+  grid-template-columns: repeat(4, 1fr); gap: 0;
+  background: var(--card); border: 1px solid var(--line);
+  border-radius: var(--radius-lg); overflow: hidden;
+}
+.metrics-compact .metric {
+  background: none; border: none; border-radius: 0; border-left: 1px solid var(--line);
+  padding: 6px 7px 7px; min-width: 0;
+}
+.metrics-compact .metric:first-child { border-left: none; }
+.metrics-compact .metric span {
+  font-size: 10px; letter-spacing: .04em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.metrics-compact .metric b { font-size: 18px; line-height: 1.2; white-space: nowrap; }
+.metrics-compact .metric b small { font-size: 10.5px; }
+
+/* 「当前机位」标题行右侧滚动提示：内联不遮内容，单行不换行 */
+.metrics-head { display: flex; align-items: baseline; gap: 6px; }
+.scrollhint {
+  margin-left: auto; font-size: 10px; font-weight: 400; color: var(--ink-3);
+  letter-spacing: .02em; white-space: nowrap;
+}
+
 /* 原始 JSON 折叠区 */
 .rawjson { margin-top: 8px; }
 .rawjson summary { font-size: 12px; color: var(--ink-3); cursor: pointer; padding: 4px 0; }
@@ -141,11 +166,11 @@ button.on:hover { background: var(--accent-ink); }
 .primary {
   width: 100%; border: none; border-radius: var(--radius-lg);
   background: var(--cta); color: #fff; font-size: 15px; font-weight: 650;
-  padding: 12px; box-shadow: 0 4px 14px rgba(232, 115, 12, .35);
+  padding: 12px; box-shadow: 0 4px 14px rgba(194, 65, 12, .35);
   display: flex; align-items: baseline; justify-content: center; gap: 8px;
 }
 .primary:hover { background: var(--cta-hover); }
-.primary .psub { font-size: 11.5px; font-weight: 400; opacity: .85; }
+.primary .psub { font-size: 11.5px; font-weight: 400; opacity: 1; }
 .subrow { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-top: 6px; }
 .airow { margin-top: 6px; }
 .aihead { display: flex; align-items: center; gap: 8px; }
@@ -155,6 +180,17 @@ button.on:hover { background: var(--accent-ink); }
   font-size: 12.5px; color: var(--ink-2); cursor: pointer; white-space: nowrap;
 }
 .toggle input { accent-color: var(--accent); }
+
+/* 底部提示行：说明文字一行，复制提示词按钮另起一行右对齐（不与告示句混在一起） */
+.aihintrow { display: flex; flex-direction: column; align-items: flex-end; gap: 1px; margin-top: 8px; }
+.aihintrow .hint { margin: 0; align-self: stretch; }
+/* 一键复制提示词：文字样式小按钮，右对齐，不增高 footer */
+.promptcopy {
+  flex: 0 0 auto; align-self: flex-end; padding: 0; border: none; background: none;
+  font-size: 12px; color: var(--accent); text-decoration: underline;
+  border-radius: 0; white-space: nowrap;
+}
+.promptcopy:hover { background: none; color: var(--accent-ink); }
 
 /* 导出画幅选择（并入标题行右侧，单行不换行，尽量不增高 footer） */
 .fmtrow { display: flex; align-items: center; gap: 8px; }

@@ -290,9 +290,48 @@ export function exportCameraJSON(rig, opts = {}) {
   return { params, stem }
 }
 
+// 一键复制的英文提示词（Gemini / image-to-image 用）：只讲「必须保留什么、只改什么」。
+// params 为 buildCameraParams 的输出；相机字段直接取用（已是与画面一致的口径）。
+export function buildPromptText(params) {
+  if (!params || typeof params !== 'object') return ''
+  const mode = params.object_mode ?? params.export?.mode ?? null
+  const modeLine =
+    mode === 'cabinet'
+      ? 'Subject: a sealed charging cabinet (closed enclosure; no internal structure visible).'
+      : mode === 'cable'
+        ? 'Subject: a single cable (keep the cable type and connectors shown in the reference).'
+        : mode === 'mount'
+          ? 'Subject: a monitor mount (stand/arm only, without the monitor screen).'
+          : 'Subject: the product shown in the reference image.'
+  const geometryGuard =
+    mode === 'cabinet'
+      ? 'Do not open closed panels or invent internal structure.'
+      : mode === 'cable'
+        ? 'Do not add extra cables/connectors or reroute the cable.'
+        : mode === 'mount'
+          ? 'Do not add a monitor screen or unsupported parts.'
+          : 'Do not add, remove, or reshape any part of the product.'
+  const fmtLabel = params.export?.format_label ?? params.format_label ?? ''
+  const w = params.image_width
+  const h = params.image_height
+  return `Use the attached clean product render as the exact composition reference.
+
+KEEP EXACTLY: camera angle, framing, subject position/scale/proportions, exact silhouette, visible ports/seams.
+CHANGE ONLY: materials, lighting, background.
+
+${modeLine}
+${geometryGuard}
+
+Camera: azimuth ${params.azimuth_deg}°, elevation ${params.elevation_deg}°, ${params.focal_equiv_mm}mm equivalent (full-frame), output ${w}×${h}, format ${fmtLabel}.
+
+Negative constraints: no reframing or cropping, no text or logos, no people or hands, no extra props, no clay/CGI look.
+
+Style: photorealistic product photography, soft studio light, clean neutral background.`
+}
+
 // KEEP/CHANGE 提示词模板（README 用）
 const KEEP_CHANGE_PROMPT =
-  'KEEP EXACTLY: camera angle, framing, subject position/scale/proportions, exact silhouette. CHANGE ONLY: materials, lighting, background. No rider, no text, no extra props, no clay/CGI look.'
+  'KEEP EXACTLY: camera angle, framing, subject position/scale/proportions, exact silhouette. CHANGE ONLY: materials, lighting, background. No text, no extra props, no clay/CGI look.'
 
 function buildReadme({ stem, transparent, size }) {
   const { w, h } = resolveSize(size)
@@ -312,6 +351,8 @@ format: ${w}×${h} (aspect ${aspect})   ← 本次导出画幅 / export canvas
 - ${stem}-depth.png   深度图：8-bit 逆线性视差（inverse linear disparity），近=白、远=黑，背景纯黑
     Depth map: 8-bit inverse linear disparity, near = white, far = black, background black.
 - ${stem}.json         机位参数 / camera parameters（可导入本工具复现机位）
+- prompt.txt           英文提示词，可直接复制粘贴给 Gemini / 图生图模型
+    Ready-to-copy English prompt for Gemini / image-to-image models.
 - README.txt
 
 == 机位 JSON 字段说明 / camera JSON field meanings ==
@@ -337,9 +378,13 @@ format: ${w}×${h} (aspect ${aspect})   ← 本次导出画幅 / export canvas
 其它文生图 / 图生图模型请只使用 clean 渲染图 + 文字提示词，不要上传深度图。
 
 == 推荐提示词模板 / recommended prompt template ==
+prompt.txt 已按本次机位生成，可直接复制粘贴给 Gemini / 图生图模型。
+prompt.txt already contains this camera's ready-to-copy prompt.
+
+通用模板 / generic template:
 ${KEEP_CHANGE_PROMPT}
 
-说明：只保留机位/构图/主体，只改材质、灯光与背景；不要骑手、不要文字、不要额外道具、不要黏土/CGI 感。
+说明：只保留机位/构图/主体，只改材质、灯光与背景；不要人物/手、不要文字、不要额外道具、不要黏土/CGI 感。
 `
 }
 
@@ -367,6 +412,7 @@ export function exportAIBundle(rig, opts = {}) {
     [`${stem}-clean.png`]: dataURLToBytes(cleanUrl),
     [`${stem}-depth.png`]: dataURLToBytes(depth.url),
     [`${stem}.json`]: strToU8(JSON.stringify(params, null, 2)),
+    'prompt.txt': strToU8(buildPromptText(params)),
     'README.txt': strToU8(buildReadme({ stem, transparent, size })),
   }
   const zip = zipSync(files, { level: 6 })
