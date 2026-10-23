@@ -181,6 +181,7 @@ export default function App() {
     const camera = rigRef.current?.camera
     if (!camera) return
     const p = describeCamera(camera, targetVec)
+    setPresetName('custom') // 按当前实际视角取景后不再属于任何预设
     applyAim(p.azimuth_deg, p.elevation_deg, camCmdRef.current.focalMm)
   }, [applyAim, targetVec])
 
@@ -299,6 +300,7 @@ export default function App() {
     setCanvasError(null)
     if (modeKey) setMode(modeKey)
     if (presetKey) setPresetName(presetKey)
+    else if (obj.camera_preset === 'custom') setPresetName('custom')
     setCamCmd((prev) => ({
       azimuthDeg: az,
       elevationDeg: el,
@@ -339,7 +341,7 @@ export default function App() {
     [parseAndRestore],
   )
 
-  const presetLabel = CAMERA_PRESETS[presetName]?.label ?? ''
+  const presetLabel = CAMERA_PRESETS[presetName]?.label ?? (presetName === 'custom' ? '自定义' : '')
   const modeLabel = MODES.find((m) => m.key === mode)?.name ?? ''
 
   return (
@@ -746,7 +748,10 @@ export default function App() {
                 maxPolarAngle={deg2rad(85)} // 俯角下限 5°
                 minAzimuthAngle={deg2rad(-65)}
                 maxAzimuthAngle={deg2rad(65)}
-                onStart={() => rigRef.current?.cancelAnim?.()}
+                onStart={() => {
+                  rigRef.current?.cancelAnim?.()
+                  setPresetName('custom') // 用户拖拽后不再属于任何预设
+                }}
               />
             </Canvas>
           )}
