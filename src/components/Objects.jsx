@@ -461,11 +461,15 @@ export function MountProxy({ armAngle, tiltAngle, pose = 'desk', screenSize = 's
       )}
       {wallPose && (
         <>
-          {/* ghost 墙：半透明大竖面，交代墙面位置（屏与之平行） */}
-          <mesh position={[0.35, 1.8, -0.62]}>
-            <planeGeometry args={[6.6, 3.9]} />
-            <meshStandardMaterial color="#93a7c0" roughness={0.9} metalness={0} transparent opacity={0.16} side={THREE.DoubleSide} depthWrite={false} />
-          </mesh>
+          {/* ghost 墙：半透明大竖面，交代墙面位置（屏与之平行）
+              noFit：自动取景只量支架产品主体，跳过 ghost 辅助对象；
+              noExport：干净图/深度图导出时隐藏（ghost 不入成品交接包，成品图仍保留） */}
+          <group userData={{ noFit: true, noExport: true }}>
+            <mesh position={[0.35, 1.8, -0.62]}>
+              <planeGeometry args={[6.6, 3.9]} />
+              <meshStandardMaterial color="#93a7c0" roughness={0.9} metalness={0} transparent opacity={0.16} side={THREE.DoubleSide} depthWrite={false} />
+            </mesh>
+          </group>
           {/* 墙板：贴墙的安装板 + 向屏方向的支臂座 */}
           <mesh position={[pivot.x, pivot.y, -0.56]}>
             <boxGeometry args={[0.46, 0.8, 0.07]} />
@@ -508,10 +512,14 @@ export function MountProxy({ armAngle, tiltAngle, pose = 'desk', screenSize = 's
           <boxGeometry args={[0.5, 0.5, 0.06]} />
           <meshStandardMaterial color="#2c3036" roughness={0.5} metalness={0.4} />
         </mesh>
-        {/* ghost 显示设备：半透明屏体，只示意尺寸与安装关系，永远贴在面板正前方 */}
-        <RoundedBox args={[scr.w, scr.h, 0.09]} radius={0.03} position={[0, 0, 0.03]}>
-          <meshStandardMaterial color="#a9bfd8" roughness={0.15} metalness={0.1} transparent opacity={0.3} depthWrite={false} />
-        </RoundedBox>
+        {/* ghost 显示设备：半透明屏体，只示意尺寸与安装关系，永远贴在面板正前方
+            noFit：自动取景跳过 ghost 屏，只量支架产品主体；
+            noExport：干净图/深度图导出时隐藏 */}
+        <group userData={{ noFit: true, noExport: true }}>
+          <RoundedBox args={[scr.w, scr.h, 0.09]} radius={0.03} position={[0, 0, 0.03]}>
+            <meshStandardMaterial color="#a9bfd8" roughness={0.15} metalness={0.1} transparent opacity={0.3} depthWrite={false} />
+          </RoundedBox>
+        </group>
       </group>
     </group>
   )

@@ -42,17 +42,37 @@ export function sphericalPosition(target, azimuthDeg, elevationDeg, distance) {
 }
 
 // 从实际相机位置反推机位参数（导出 JSON 用，与真实画面口径一致）
+// 字段约定（F 项补全）：
+//   schema                 文件版本，导入时校验
+//   fov_deg / fov_axis     fov 为「垂直」视场角（fov_axis: 'vertical'）
+//   sensor_height_mm       全画幅等效垂直传感器高度 24mm（focal = 12 / tan(fov/2)）
+//   azimuth_convention     方位角：0 = 相机在 +Z 轴正对 target，正值绕 +Y 转向 +X（画面右侧）
+//   elevation_convention   俯仰角：相机高于 target 水平面的角度（度），俯视为正
+//   units                  'scene'：场景单位；distance_to_target = 相机到注视点距离
+//   camera_up / roll_deg   相机上方向与滚转（本工具始终 [0,1,0] / 0）
 export function describeCamera(camera, targetVec) {
   const dx = camera.position.x - targetVec.x
   const dy = camera.position.y - targetVec.y
   const dz = camera.position.z - targetVec.z
   const distance = Math.sqrt(dx * dx + dy * dy + dz * dz)
   return {
+    schema: 'studio3d/camera@1',
     azimuth_deg: +rad2deg(Math.atan2(dx, dz)).toFixed(2),
     elevation_deg: +rad2deg(Math.asin(dy / distance)).toFixed(2),
     distance: +distance.toFixed(3),
+    distance_to_target: +distance.toFixed(3),
     fov_deg: +camera.fov.toFixed(2),
+    fov_axis: 'vertical',
     focal_equiv_mm: +fovToFocal(camera.fov).toFixed(1),
+    sensor_height_mm: SENSOR_HEIGHT_MM,
+    near: +camera.near.toFixed(4),
+    far: +camera.far.toFixed(4),
+    camera_up: [0, 1, 0],
+    roll_deg: 0,
+    azimuth_convention:
+      'deg; 0 = camera on +Z axis facing the target; positive = rotate toward +X (viewer right)',
+    elevation_convention: 'deg above the horizontal plane through the target (looking down = positive)',
+    units: 'scene',
     camera_position: [
       +camera.position.x.toFixed(3),
       +camera.position.y.toFixed(3),
