@@ -31,10 +31,23 @@ npx vite build --base=./
 - 注意：`俯视` 是 57° 高角度，不是 90° 正顶视；OrbitControls 上限为 60°。
 
 ### 导出（给 AI 管线的三件套）
-预览、成品图、深度图统一 **4:3（1400×1050）** 口径，避免预览与导出取景不一致。
-- **渲染图** PNG：白底 1400×1050；导出时隐藏深色光池圆盘，只保留 ShadowMaterial 接触阴影（不再出现白底黑盘）。
-- **深度图** PNG：单一代码路径（独立按钮与 AI 交接包共用）。临时收紧 near/far、强制 4:3、隐藏地面与 ghost 辅助体；`MeshDepthMaterial + RGBADepthPacking` → RenderTarget 读回 → 线性视深 → **8-bit 逆线性视差**（近白、远黑、背景纯黑），不是截图反相。
-- **机位参数** JSON：`schema: studio3d/camera@1`，含画幅、垂直 fov、传感器高、near/far、相机 up、方位/仰角约定、相机坐标与 target、导出模式/预设/透明底、深度 near/far 等；支持**导入 JSON 恢复机位**（文件或粘贴，旧版无 schema 的 JSON 也兼容）。
+导出画幅可选（footer「导出画幅」）：**预览取景框、成品图、深度图、AI 交接包共用同一画幅与 aspect**，避免预览与导出取景不一致。默认 4:3（1400×1050）。
+
+| 画幅 | 像素 |
+| --- | --- |
+| 4:3 | 1400×1050 |
+| 1:1 | 2000×2000 |
+| 4:5 | 1600×2000 |
+| 3:4 | 1500×2000 |
+| 2:3 | 1600×2400 |
+| 3:2 | 1800×1200 |
+| 16:9 | 1920×1080 |
+| 9:16 | 1080×1920 |
+
+切换画幅会按当前方位/俯仰/焦段自动 refit；导出文件名在 `_<focal>mm` 后带画幅标识（如 `..._50mm_1x1_2026...png`）。
+- **渲染图** PNG：白底所选画幅；导出时隐藏深色光池圆盘，只保留 ShadowMaterial 接触阴影（不再出现白底黑盘）。
+- **深度图** PNG：单一代码路径（独立按钮与 AI 交接包共用）。临时收紧 near/far（按当前距离换算，不写死）、强制所选画幅、隐藏地面与 ghost 辅助体；`MeshDepthMaterial + RGBADepthPacking` → RenderTarget 读回 → 线性视深 → **8-bit 逆线性视差**（近白、远黑、背景纯黑），不是截图反相。
+- **机位参数** JSON：`schema: studio3d/camera@1`，含画幅（`image_width/image_height/aspect_ratio`、`export.format_key/format_label`）、垂直 fov、传感器高、near/far、相机 up、方位/仰角约定、相机坐标与 target、导出模式/预设/透明底、深度 near/far 等；支持**导入 JSON 恢复机位**（文件或粘贴）——会一并恢复导出画幅（旧版无 schema 的 JSON 回退 4:3）。
 - **AI 交接包·干净版**：打包成 **1 个 ZIP**（干净图 + 深度图 + 机位 JSON + README.txt），避免浏览器拦截多文件下载；勾选「透明底」时干净图带 alpha。干净图与深度图会隐藏 ground 与 ghost 墙/屏，只留产品本体；白底成品图仍保留 ghost 作展示参考。
 - 深度图用途：Gemini / OpenAI 图像接口不接受 depth/pose 通道；深度图只适用于 Qwen-Image-Edit + ControlNet Union、fal `flux-general`、Runware 等支持 depth 条件的模型。
 
@@ -54,6 +67,7 @@ src/
     CameraRig.jsx       相机预设动画与机位反推
   lib/
     camera.js           机位参数换算
+    formats.js          导出画幅表与尺寸校验（8 个常用规格）
     framing.js          主体包围盒自动取景（fitDistance / measureSubject）
     exporter.js         渲染/深度/JSON/干净版交接包导出（含 ZIP）
   styles.css
@@ -62,8 +76,8 @@ public/textures/        充电柜贴图（官网实拍裁切）
 
 ## 已知限制
 
-- 导出尺寸目前固定 1400×1050（4:3）；1:1 / 4:5 / 16:9 尚未提供。
-- 一次只能导出当前机位；多角度批量导出未做。
+- 导出画幅固定为表内 8 个规格（4:3 / 1:1 / 4:5 / 3:4 / 2:3 / 3:2 / 16:9 / 9:16），自定义像素尺寸未做。
+- 一次只能导出当前机位；多角度 / 多画幅批量导出未做。
 - 机位不写入 URL（仅 `?mode=&cable=` 支持直达），分享精确机位请用导出的 JSON。
 - 面板上的方位/俯仰/距离为只读指标，直接在画面拖动或点预设调整。
 - 充电柜正面贴图沿用官网实拍裁切，左上角 logo 在极限视角下可能贴边；后续可加 UV 内缩。

@@ -16,6 +16,7 @@ import { CanvasErrorBoundary } from './components/ErrorBoundary'
 import { CameraRig, RigRegistrar } from './components/CameraRig'
 import { CAMERA_PRESETS, FOCALS, focalToFov, deg2rad, describeCamera } from './lib/camera'
 import { measureSubject, fitDistance } from './lib/framing'
+import { FORMATS, DEFAULT_FORMAT_KEY, getFormat } from './lib/formats'
 import {
   exportRenderPNG,
   exportDepthPNG,
@@ -28,7 +29,7 @@ import {
 // 取代写死的按对象取景倍率：用主体包围盒反推距离，target 取包围盒中心。
 // margin 为有效 FOV 收窄比例：每边留白 = margin/2，0.18 ≈ 四边各约 9% 余量（规格 8–12%）。
 const FIT_MARGIN = 0.18
-const ASPECT = 4 / 3 // 预览 / 渲染 / 深度统一 4:3 口径
+// 画幅由导出画幅表（src/lib/formats.js）决定；预览取景框与导出共用同一 aspect
 
 // 姿态预设的关节角：切姿态时写入滑杆值，用户之后仍可拖滑杆微调
 const POSE_JOINTS = {
@@ -94,13 +95,20 @@ export default function App() {
   const [showHint, setShowHint] = useState(true)
   const [copied, setCopied] = useState(false)
   const [transparent, setTransparent] = useState(false) // 干净 PNG 透明底（默认关）
-  const [frame, setFrame] = useState({ w: 0, h: 0 }) // 4:3 取景框尺寸
+  const [formatKey, setFormatKey] = useState(DEFAULT_FORMAT_KEY) // 导出画幅（默认 4:3）
+  const format = useMemo(() => getFormat(formatKey), [formatKey])
+  const aspect = format.w / format.h
+  const [frame, setFrame] = useState({ w: 0, h: 0 }) // 取景框尺寸（跟随画幅 aspect）
   const [importText, setImportText] = useState('')
   const [importMsg, setImportMsg] = useState(null)
   const [sceneReady, setSceneReady] = useState(false) // 首帧场景就绪前显示 DOM 加载浮层
 
   const modeRef = useRef(mode)
   modeRef.current = mode
+  const formatKeyRef = useRef(formatKey)
+  formatKeyRef.current = formatKey
+  const presetRef = useRef(presetName)
+  presetRef.current = presetName
 
   const pres = CAMERA_PRESETS.three_quarter
   const [camCmd, setCamCmd] = useState(() => ({
@@ -116,27 +124,32 @@ export default function App() {
   const camCmdRef = useRef(camCmd)
   camCmdRef.current = camCmd
   const targetVec = useMemo(() => new THREE.Vector3(...camCmd.target), [camCmd.target])
+  const targetRef = useRef(targetVec)
+  targetRef.current = targetVec
   const extra = useMemo(
-    () => ({ object_mode: mode, camera_preset: presetName }),
-    [mode, presetName],
+    () => ({ object_mode: mode, camera_preset: presetName, format_key: format.key }),
+    [mode, presetName, format.key],
   )
 
   useEffect(() => {
     window.__rigRef = rigRef
   }, []) // 无头验收/调试入口
 
-  // --- 4:3 取景框：stage 内留 16px 边距，min 适配，短/窄窗口不溢出 ---
+  // --- 取景框：stage 内留 16px 边距，按当前画幅 aspect 适配，短/窄窗口不溢出 ---
   useEffect(() => {
     const el = stageRef.current
     if (!el) return
-    const ro = new ResizeObserver(() => {
+    const measure = () => {
       const r = el.getBoundingClientRect()
-      const w = Math.max(0, Math.min(r.width - 32, (r.height - 32) * ASPECT))
-      setFrame({ w, h: (w * 3) / 4 })
-    })
+      const w = Math.max(0, Math.min(r.width - 32, (r.height - 32) * aspect))
+      setFrame({ w, h: w / aspect })
+    }
+    measure() // aspect 变化时立即重量（ResizeObserver 只在 stage 尺寸变化时触发）
+    const ro = new ResizeObserver(measure)
     ro.observe(el)
     return () => ro.disconnect()
-  }, [])
+    // aspect 由 formatKey 推导；两者都列入依赖，切换画幅时重新量取景框
+  }, [aspect, formatKey])
 
   // --- 自动取景：按当前角度/焦段重算距离与 target，并驱动相机动画 ---
   const applyAim = useCallback((azDeg, elDeg, focalMm) => {
@@ -149,7 +162,8 @@ export default function App() {
       if (!box.isEmpty()) {
         const center = box.getCenter(new THREE.Vector3())
         distance = fitDistance({
-          aspect: camera.aspect || ASPECT,
+          // 用所选画幅的 aspect（不用 camera.aspect，避免 canvas resize 竞态）
+          aspect,
           fovDeg: focalToFov(focalMm),
           azimuthDeg: azDeg,
           elevationDeg: elDeg,
@@ -168,10 +182,19 @@ export default function App() {
       target: target ?? prev.target,
       seq: prev.seq + 1,
     }))
-  }, [])
+  }, [aspect])
 
   const refit = useCallback(() => {
     const c = camCmdRef.current
+    // 用户拖拽过（custom）时按真实相机角度重取景，避免切画幅/切模式把视角拉回上一个预设
+    if (presetRef.current === 'custom') {
+      const camera = rigRef.current?.camera
+      if (camera) {
+        const p = describeCamera(camera, targetRef.current)
+        applyAim(p.azimuth_deg, p.elevation_deg, c.focalMm)
+        return
+      }
+    }
     applyAim(c.azimuthDeg, c.elevationDeg, c.focalMm)
   }, [applyAim])
 
@@ -206,16 +229,16 @@ export default function App() {
       cancelled = true
       clearInterval(id)
     }
-  }, [mode, cablePreset, mountPose, screenSize, linkOn, refit])
+  }, [mode, formatKey, cablePreset, mountPose, screenSize, linkOn, refit])
 
   // 面板上的机位参数与真实相机同步（轮询 300ms，原型够用）
   useEffect(() => {
     const id = setInterval(() => {
-      const p = buildCameraParams(rigRef.current, targetVec, extra, { transparent })
+      const p = buildCameraParams(rigRef.current, targetVec, extra, { transparent, size: format })
       if (p) setCamParams(p)
     }, 300)
     return () => clearInterval(id)
-  }, [targetVec, extra, transparent])
+  }, [targetVec, extra, transparent, format])
 
   const goPreset = useCallback(
     (name) => {
@@ -229,6 +252,14 @@ export default function App() {
   const setFocal = useCallback(
     (f) => {
       const c = camCmdRef.current
+      if (presetRef.current === 'custom') {
+        const camera = rigRef.current?.camera
+        if (camera) {
+          const p = describeCamera(camera, targetRef.current)
+          applyAim(p.azimuth_deg, p.elevation_deg, f)
+          return
+        }
+      }
       applyAim(c.azimuthDeg, c.elevationDeg, f)
     },
     [applyAim],
@@ -294,11 +325,24 @@ export default function App() {
     }
     const modeKey = MODES.some((m) => m.key === obj.object_mode) ? obj.object_mode : null
     const presetKey = CAMERA_PRESETS[obj.camera_preset] ? obj.camera_preset : null
-    // 仅在「导入会切换模式」时抑制一次自动 re-fit（该 re-fit 会覆盖导入的 target/distance）；
-    // 抑制标志由模式切换后的取景 watcher 消费，避免被时间竞态误伤
-    if (modeKey && modeKey !== modeRef.current) suppressFitRef.current = true
+    // 画幅：优先用 JSON 的 export.format_key（在表中才采纳）；旧版无 schema 时回到 4:3（旧构建只有 4:3）
+    const rawFmt = obj?.export?.format_key
+    const nextFormatKey = legacy
+      ? DEFAULT_FORMAT_KEY
+      : FORMATS.some((f) => f.key === rawFmt)
+        ? rawFmt
+        : null
+    // 模式或画幅发生变化时抑制一次自动 re-fit（否则会覆盖导入的 distance/target）；
+    // React 批处理让 mode+format 的变化只触发一次 watcher，消费一次即可
+    if (
+      (modeKey && modeKey !== modeRef.current) ||
+      (nextFormatKey && nextFormatKey !== formatKeyRef.current)
+    ) {
+      suppressFitRef.current = true
+    }
     setCanvasError(null)
     if (modeKey) setMode(modeKey)
+    if (nextFormatKey) setFormatKey(nextFormatKey)
     if (presetKey) setPresetName(presetKey)
     else if (obj.camera_preset === 'custom') setPresetName('custom')
     setCamCmd((prev) => ({
@@ -603,13 +647,33 @@ export default function App() {
 
         <footer className="panel-foot">
           <h2><span className="step">3</span>导出成品</h2>
+          <div className="fmtrow">
+            <label htmlFor="fmt-select">导出画幅</label>
+            <select
+              id="fmt-select"
+              aria-label="导出画幅"
+              value={formatKey}
+              onChange={(e) => setFormatKey(e.target.value)}
+            >
+              {FORMATS.map((f) => (
+                <option key={f.key} value={f.key}>
+                  {f.label} · {f.w}×{f.h}
+                </option>
+              ))}
+            </select>
+          </div>
           <button
             className="primary"
             onClick={() =>
-              exportRenderPNG(rigRef.current, { disc: discRef.current, target: targetVec, extra })
+              exportRenderPNG(rigRef.current, {
+                disc: discRef.current,
+                target: targetVec,
+                extra,
+                size: format,
+              })
             }
           >
-            导出渲染图 PNG<span className="psub">白底 1400×1050</span>
+            导出渲染图 PNG<span className="psub">白底 {format.w}×{format.h}</span>
           </button>
           <div className="subrow">
             <button
@@ -618,6 +682,7 @@ export default function App() {
                   target: targetVec,
                   ground: groundRef.current,
                   extra,
+                  size: format,
                 })
               }
             >
@@ -625,7 +690,12 @@ export default function App() {
             </button>
             <button
               onClick={() =>
-                exportCameraJSON(rigRef.current, { target: targetVec, extra, transparent })
+                exportCameraJSON(rigRef.current, {
+                  target: targetVec,
+                  extra,
+                  transparent,
+                  size: format,
+                })
               }
             >
               机位参数 JSON
@@ -640,6 +710,7 @@ export default function App() {
                     target: targetVec,
                     extra,
                     transparent,
+                    size: format,
                   })
                 }
               >
@@ -688,7 +759,7 @@ export default function App() {
             <Canvas
               dpr={[1, 2]}
               gl={{ preserveDrawingBuffer: true, antialias: true }}
-              camera={{ position: [4.6, 3.1, 6.9], fov: focalToFov(50), near: 0.1, far: 100 }}
+              camera={{ position: [4.6, 3.1, 6.9], fov: focalToFov(50), near: 0.1, far: 400 }}
               shadows
             >
               {/* 影棚背景不用纯色：透明画布透出 .stage 的深色径向渐变（无缝背景纸感） */}
@@ -743,7 +814,7 @@ export default function App() {
                 rotateSpeed={0.45}
                 zoomSpeed={0.75}
                 minDistance={3.5}
-                maxDistance={40}
+                maxDistance={120}
                 minPolarAngle={deg2rad(30)} // 俯角上限 60°
                 maxPolarAngle={deg2rad(85)} // 俯角下限 5°
                 minAzimuthAngle={deg2rad(-65)}
